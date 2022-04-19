@@ -153,3 +153,48 @@ class LaneLines:
                 rightx_current = np.int32(np.mean(good_right_x))
 
         return leftx, lefty, rightx, righty, out_img
+    
+     def fit_poly(self, img):
+        """Find the lane line from an image and draw it.
+
+        Parameters:
+            img (np.array): a binary warped image
+
+        Returns:
+            out_img (np.array): a RGB image that have lane line drawn on that.
+        """
+        #find all pixels coordinates inside all windows
+        leftx, lefty, rightx, righty, out_img = self.find_lane_pixels(img)
+
+        if len(lefty) > 1500:
+          #calculates the coof. of the ploynomial descibed by the lefty, leftx points
+            self.left_fit = np.polyfit(lefty, leftx, 2)
+        if len(righty) > 1500:
+            self.right_fit = np.polyfit(righty, rightx, 2)
+
+        # Generate x and y values for plotting
+        maxy = img.shape[0] - 1
+        miny = img.shape[0] // 3
+        if len(lefty):
+            maxy = max(maxy, np.max(lefty))
+            miny = min(miny, np.min(lefty))
+
+        if len(righty):
+            maxy = max(maxy, np.max(righty))
+            miny = min(miny, np.min(righty))
+
+        ploty = np.linspace(miny, maxy, img.shape[0])
+        # x      =          A        y^2      +      B            y    +    C
+        left_fitx = self.left_fit[0]*ploty**2 + self.left_fit[1]*ploty + self.left_fit[2]
+        right_fitx = self.right_fit[0]*ploty**2 + self.right_fit[1]*ploty + self.right_fit[2]
+
+        # Visualization
+        for i, y in enumerate(ploty):
+            l = int(left_fitx[i])
+            r = int(right_fitx[i])
+            y = int(y)
+            cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
+
+        lR, rR, pos = self.measure_curvature()
+
+        return out_img
