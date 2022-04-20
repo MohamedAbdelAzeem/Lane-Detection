@@ -72,11 +72,11 @@ def main():
   input = args['INPUT_PATH']
   output = args['OUTPUT_PATH']
 
-  findLaneLines = FindLaneLines()
+
   if args['--video']:
-      findLaneLines.process_video(input, output)
+      process_video(input, output)
   else:
-      findLaneLines.process_image(input, output)
+      process_image(input, output)
 
 
 if __name__ == "__main__":
