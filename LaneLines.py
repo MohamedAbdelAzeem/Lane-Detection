@@ -39,6 +39,10 @@ class LaneLines:
         self.right_curve_img = cv2.normalize(src=self.right_curve_img, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
         self.keep_straight_img = cv2.normalize(src=self.keep_straight_img, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
+        self.WindowTopLeft = []
+        self.WindowBottomRight = [] 
+
+        self.OutImageWindow =None
 
        
         # HYPERPARAMETERS
@@ -77,8 +81,8 @@ class LaneLines:
         topleft = (center[0]-margin, center[1]-height//2)   #point
         bottomright = (center[0]+margin, center[1]+height//2) #point
 
-        cv2.rectangle(img,topleft, bottomright, color=(0,0,255), thickness=100)
-
+        self.WindowTopLeft.append(topleft)
+        self.WindowBottomRight.append(bottomright)
 
         #check if topleft is outside in the left and bottomright is outside in the right
         condx = (topleft[0] <= self.nonzerox) & (self.nonzerox <= bottomright[0])
@@ -153,8 +157,8 @@ class LaneLines:
                 rightx_current = np.int32(np.mean(good_right_x))
 
         return leftx, lefty, rightx, righty, out_img
-    
-     def fit_poly(self, img):
+
+    def fit_poly(self, img):
         """Find the lane line from an image and draw it.
 
         Parameters:
@@ -188,6 +192,8 @@ class LaneLines:
         left_fitx = self.left_fit[0]*ploty**2 + self.left_fit[1]*ploty + self.left_fit[2]
         right_fitx = self.right_fit[0]*ploty**2 + self.right_fit[1]*ploty + self.right_fit[2]
 
+
+        self.OutImageWindow =  np.copy(out_img)
         # Visualization
         for i, y in enumerate(ploty):
             l = int(left_fitx[i])
@@ -195,11 +201,18 @@ class LaneLines:
             y = int(y)
             cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
 
+        
+        for i in range(18):
+          cv2.rectangle(self.OutImageWindow,(self.WindowTopLeft[i][0], self.WindowTopLeft[i][1]),( self.WindowBottomRight[i][0] , self.WindowBottomRight[i][1] ),(0,255,0), 2)
+
+        self.WindowTopLeft.clear()
+        self.WindowBottomRight.clear()
+
         lR, rR, pos = self.measure_curvature()
 
         return out_img
-    
-   def plot(self, out_img):
+
+    def plot(self, out_img):
         np.set_printoptions(precision=6, suppress=True)
         lR, rR, pos = self.measure_curvature()
 
@@ -219,7 +232,7 @@ class LaneLines:
         if len(self.dir) > 10:
             self.dir.pop(0)
 
-        W = 400
+        W = 320
         H = 500
         widget = np.copy(out_img[:H, :W])
         widget //= 2
@@ -244,30 +257,30 @@ class LaneLines:
             y, x = self.keep_straight_img[:,:,3].nonzero()
             out_img[y, x-100+W//2] = self.keep_straight_img[y, x, :3]
 
-        cv2.putText(out_img, msg, org=(10, 240), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+        cv2.putText(out_img, msg, org=(10, 240), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.66, color=(255, 255, 255), thickness=2)
         if direction in 'LR':
-            cv2.putText(out_img, curvature_msg, org=(10, 280), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+            cv2.putText(out_img, curvature_msg, org=(10, 280), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.67, color=(255, 255, 255), thickness=2)
 
         cv2.putText(
             out_img,
             "Good Lane Keeping",
-            org=(10, 400),
+            org=(5, 400),
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-            fontScale=1.2,
+            fontScale=.66,
             color=(0, 255, 0),
             thickness=2)
 
         cv2.putText(
             out_img,
-            "Vehicle is {:.2f} m away from center".format(pos),
-            org=(10, 450),
+            "Vehicle is {:.2f} m from center".format(pos),
+            org=(5, 450),
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
             fontScale=0.66,
             color=(255, 255, 255),
             thickness=2)
 
         return out_img
-    
+
     def measure_curvature(self):
         ym = 30/720
         xm = 3.7/700
@@ -283,4 +296,4 @@ class LaneLines:
         xl = np.dot(self.left_fit, [700**2, 700, 1])
         xr = np.dot(self.right_fit, [700**2, 700, 1])
         pos = (1280//2 - (xl+xr)//2)*xm
-        return left_curveR, right_curveR, pos 
+        return left_curveR, right_curveR, pos
